@@ -135,6 +135,48 @@ def measure(fn: Callable[[], object], timed_runs: int = DEFAULT_TIMED_RUNS) -> D
     }
 
 
+MARGINAL_M = 200
+MARGINAL_SMALL_N = 4_000
+MARGINAL_LARGE_N = 20_000
+
+
+def measure_marginal() -> Dict[str, float]:
+    """What does one more residue of the *longer* sequence cost?
+
+    Hold ``y`` short and fixed, grow ``x``, and take the difference in peak
+    memory divided by the difference in length.  Subtracting two peaks cancels
+    the fixed overhead, which is what makes this comparable between the two
+    implementations.
+
+    For the oracle the answer is forced by the data structure: one more
+    residue of ``x`` is one more row of each of three int64 layers, so
+    ``24 * (m + 1)`` bytes.  Reporting the measurement next to that prediction
+    is the point; if they ever stop agreeing, something is wrong with either
+    the implementation or the measurement.
+    """
+    m = MARGINAL_M
+    y = make_pair(m, seed=777)[0]
+    x_small = make_pair(MARGINAL_SMALL_N, seed=778)[0]
+    x_large = make_pair(MARGINAL_LARGE_N, seed=778)[0]
+    span = MARGINAL_LARGE_N - MARGINAL_SMALL_N
+
+    out: Dict[str, float] = {}
+    for name, fn in (
+        ("linear", linear.align_score),
+        ("quadratic", quadratic.align_score),
+    ):
+        small = measure(lambda: fn(x_small, y, SCORING), 1)["peak_bytes"]
+        large = measure(lambda: fn(x_large, y, SCORING), 1)["peak_bytes"]
+        out["%s_bytes_per_residue" % name] = round((large - small) / span, 2)
+        out["%s_peak_small" % name] = small
+        out["%s_peak_large" % name] = large
+    out["predicted_quadratic_bytes_per_residue"] = float(24 * (m + 1))
+    out["ratio"] = round(
+        out["quadratic_bytes_per_residue"] / out["linear_bytes_per_residue"], 1
+    )
+    return out
+
+
 def run(timed_runs: int = DEFAULT_TIMED_RUNS, sizes: Optional[List[int]] = None) -> Dict[str, object]:
     rows: List[Dict[str, object]] = []
     for n in sizes or SIZES:
@@ -193,7 +235,11 @@ def run(timed_runs: int = DEFAULT_TIMED_RUNS, sizes: Optional[List[int]] = None)
                     % (quadratic_bytes / 1e9),
                 }
             )
-    return {"hardware": hardware(), "rows": rows}
+    return {
+        "hardware": hardware(),
+        "rows": rows,
+        "marginal": measure_marginal(),
+    }
 
 
 def flatten(report: Dict[str, object]) -> Dict[str, object]:
@@ -208,6 +254,9 @@ def flatten(report: Dict[str, object]) -> Dict[str, object]:
         if row["score"] != "":
             flat["score.%s" % key] = int(row["score"])
         flat["cells.n%d" % row["n"]] = int(row["dp_cells"])
+    for name, value in report.get("marginal", {}).items():  # type: ignore[union-attr]
+        flat["marginal.%s" % name] = value
+
     by = {
         (r["n"], r["implementation"]): r for r in report["rows"]  # type: ignore[index]
     }
@@ -257,6 +306,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             for row in report["rows"]:  # type: ignore[index]
                 writer.writerow(row)
 
+        marginal_path = args.csv.with_name("marginal.csv")
+        with marginal_path.open("w", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["metric", "value"])
+            for key, value in sorted(report["marginal"].items()):  # type: ignore[index]
+                writer.writerow([key, value])
+
     if args.json:
         json.dump({"hardware": report["hardware"], "values": flatten(report)}, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
@@ -299,6 +355,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     for key, value in sorted(flatten(report).items()):
         if key.startswith("ratio."):
             print("%s: %sx" % (key, value))
+
+    marginal = report["marginal"]  # type: ignore[index]
+    print()
+    print(
+        "marginal cost of one more residue of x, at m = %d (peaks at n = %d "
+        "and n = %d):" % (MARGINAL_M, MARGINAL_SMALL_N, MARGINAL_LARGE_N)
+    )
+    print("  linear     %9.2f bytes/residue" % marginal["linear_bytes_per_residue"])
+    print(
+        "  quadratic  %9.2f bytes/residue (24*(m+1) predicts %.0f)"
+        % (
+            marginal["quadratic_bytes_per_residue"],
+            marginal["predicted_quadratic_bytes_per_residue"],
+        )
+    )
+    print("  ratio      %9.1fx" % marginal["ratio"])
     return 0
 
 

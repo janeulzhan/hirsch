@@ -20,6 +20,7 @@ is not gated here.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 import sys
@@ -41,7 +42,7 @@ TOL_RE = re.compile(r"tol=(?P<num>[0-9]+(?:\.[0-9]+)?)(?P<pct>%?)")
 
 # Keys outside these families are rejected: the point of the gate is that only
 # deterministic quantities are locked.
-ALLOWED_PREFIXES = ("mem.", "score.", "cells.", "ratio.", "pairs.")
+ALLOWED_PREFIXES = ("mem.", "score.", "cells.", "ratio.", "pairs.", "marginal.")
 
 
 class MalformedMarkers(Exception):
@@ -98,10 +99,48 @@ def validate_markers(text: str) -> List[Tuple[str, str, str]]:
     return spans
 
 
-def load_values(json_path: Optional[Path], timed_runs: int = 3) -> Dict[str, object]:
+def _coerce(row: Dict[str, str]) -> Dict[str, object]:
+    out: Dict[str, object] = dict(row)
+    for field in ("n", "len_x", "len_y", "dp_cells", "peak_bytes", "score"):
+        value = row.get(field, "")
+        if value != "":
+            out[field] = int(value)
+    return out
+
+
+def load_values_from_csv(results_csv: Path) -> Dict[str, object]:
+    """Rebuild the gated values from the committed raw CSV files.
+
+    No measurement happens here, so this is exact and machine-independent.
+    """
+    from bench import benchmark  # noqa: PLC0415  (deliberately lazy)
+
+    with results_csv.open(newline="") as handle:
+        rows = [_coerce(row) for row in csv.DictReader(handle)]
+    if not rows:
+        raise MalformedMarkers("%s contains no rows" % results_csv)
+
+    marginal: Dict[str, float] = {}
+    marginal_path = results_csv.with_name("marginal.csv")
+    if marginal_path.exists():
+        with marginal_path.open(newline="") as handle:
+            for record in csv.DictReader(handle):
+                marginal[record["metric"]] = float(record["value"])
+
+    report = {"rows": rows, "marginal": marginal}
+    return dict(benchmark.flatten(report))
+
+
+def load_values(
+    json_path: Optional[Path],
+    csv_path: Optional[Path] = None,
+    timed_runs: int = 3,
+) -> Dict[str, object]:
     if json_path is not None:
         payload = json.loads(json_path.read_text())
         return dict(payload["values"])
+    if csv_path is not None:
+        return load_values_from_csv(csv_path)
     from bench import benchmark  # noqa: PLC0415  (deliberately lazy)
 
     report = benchmark.run(timed_runs)
@@ -182,7 +221,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--json",
         type=Path,
-        help="read measured values from this JSON file instead of running the benchmark",
+        help="read values from this JSON file instead of running the benchmark",
+    )
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        nargs="?",
+        const=REPO_ROOT / "bench" / "results.csv",
+        help="read values from the committed raw CSV instead of measuring; "
+        "exact and machine-independent, and what CI uses",
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="verify only, never write")
@@ -206,7 +253,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     text = args.readme.read_text()
     try:
-        values = load_values(args.json, args.runs)
+        values = load_values(args.json, args.csv, args.runs)
         if not args.no_extras:
             values.update(extra_values())
 

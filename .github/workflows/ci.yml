@@ -2,7 +2,9 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   test:
@@ -10,6 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # These are the versions the project claims to support. Keep this
+        # matrix and requires-python in pyproject.toml in step with each
+        # other; the README quotes both.
         python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +28,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[test]"
 
+      # Includes tests/test_memory.py, which is where an actual memory
+      # regression would be caught. Those assertions are growth ratios and
+      # first-principles predictions, never absolute byte counts, so they are
+      # portable across runners by construction.
       - name: Test
         run: python -m pytest -q
 
@@ -43,9 +52,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[test]"
 
-      # Re-measures the benchmark and compares it against the numbers
-      # committed in the README. Only deterministic quantities are gated:
-      # tracemalloc peak memory, alignment scores, DP cell counts, ratios and
-      # test pair counts. Wall-clock timings are never gated.
-      - name: Check the README numbers
-        run: python tools/benchlock.py --check --runs 1
+      # Checks the README against the raw CSV committed beside it. Nothing is
+      # measured here, so the comparison is exact and identical on every
+      # machine. Re-measuring tracemalloc peaks on a runner and comparing them
+      # to figures recorded on different hardware would be comparing two
+      # different things, and would allocate 600 MB to do it.
+      - name: Check the README against the committed benchmark data
+        run: python tools/benchlock.py --check --csv bench/results.csv

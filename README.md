@@ -40,12 +40,33 @@ Both implementations return the same score at every size the oracle can run,
 which the harness asserts: <!--bench:score.n5000_linear-->7,185<!--/bench-->
 at n = 5,000, from both.
 
-Peak memory from `tracemalloc` is deterministic (it counts bytes requested,
-not resident pages), so these numbers are checked in CI by
-[`tools/benchlock.py`](tools/benchlock.py), which re-measures them and fails
-if a committed number has drifted past the tolerance declared in its own
-marker. **Wall-clock timings are never gated**, in CI or anywhere else; they
-live in their own table below and are labelled as such.
+Every number above is locked by [`tools/benchlock.py`](tools/benchlock.py),
+which parses the marker spans in this file and compares them against measured
+values. It runs two ways on purpose:
+
+- **In CI**, against the raw CSV committed beside it. Nothing is measured, so
+  the comparison is exact and identical on every machine. What this proves is
+  that the README agrees with the data committed next to it.
+- **Locally**, re-running the benchmark, which is how these numbers are
+  regenerated.
+
+Re-measuring `tracemalloc` peaks on a CI runner and comparing them to figures
+recorded on this laptop would be comparing two different things: the counts
+are reproducible to the byte on one machine, but they track the numpy and
+CPython build. Catching an actual memory regression is instead the job of
+[`tests/test_memory.py`](tests/test_memory.py), which runs on every CI job and
+asserts growth ratios and first-principles predictions rather than absolute
+byte counts: that the oracle's peak more than triples per doubling of n while
+the linear aligner's less than 2.6x, that the oracle's peak sits between 0.9
+and 1.4 times the `24*(n+1)*(m+1)` bytes three int64 layers imply, and that its
+marginal per-residue cost is within 2 percent of the `24*(m+1)` its data
+structure forces. Those hold on any machine.
+
+**Wall-clock timings are never gated**, in CI or anywhere else; they live in
+their own table below and are labelled as such. `benchlock` refuses a key
+outside the deterministic families outright, so a timing number cannot be
+locked even by mistake, which `tests/test_benchlock.py` checks against seven
+different timing-shaped key spellings.
 
 ## The part that is actually hard
 
@@ -137,7 +158,9 @@ python3 -m pytest -q
 hirsch P69905 P68871
 ```
 
-The only runtime dependency is numpy. Python 3.9 or newer.
+The only runtime dependency is numpy. Python 3.11 or newer: 3.11 and 3.12
+are the versions CI exercises, and `requires-python` is set to match rather
+than to claim a range nothing tests.
 
 ```python
 from hirsch import linear, quadratic, blosum62
@@ -287,9 +310,18 @@ Read these before using this for anything.
   sequences are short enough for the full matrix to fit, use the full matrix.
 - **"Linear space" means the DP table.** Working space for the dynamic
   programming is O(min(n, m)). Holding the inputs and emitting the alignment
-  is inherently O(n + m), and that term is included in every number above. A
-  test measures the marginal cost of one more residue of the longer sequence
-  at 5.63 bytes, against 4,824 bytes for the oracle at m = 200.
+  is inherently O(n + m), and that term is included in every number above.
+  Measured: with `m` held at 200 and `n` grown from 4,000 to 20,000, one more
+  residue of the longer sequence costs
+  <!--bench:marginal.linear_bytes_per_residue tol=40%-->5.63<!--/bench-->
+  bytes here against
+  <!--bench:marginal.quadratic_bytes_per_residue tol=5%-->4,850.02<!--/bench-->
+  bytes for the oracle, a factor of
+  <!--bench:marginal.ratio tol=40%-->861.5<!--/bench-->. The oracle's figure
+  is one more row of three int64 layers, which predicts
+  <!--bench:marginal.predicted_quadratic_bytes_per_residue-->4,824<!--/bench-->
+  bytes; the measurement lands within 0.6 percent of that, and
+  `tests/test_memory.py` asserts the agreement.
 - **Global alignment only.** No local (Smith-Waterman) mode, no semi-global
   or overlap mode, no free end gaps.
 - **Integer scores only.** This is deliberate: the differential test asserts
@@ -298,10 +330,11 @@ Read these before using this for anything.
 - **One scoring matrix is bundled.** BLOSUM62, embedded rather than fetched.
   PAM and the other BLOSUM levels are not included, though any matrix can be
   passed in as a dict.
-- **CI gates only deterministic quantities**: `tracemalloc` peak memory,
-  alignment scores, DP cell counts, ratios of those, and test pair counts.
-  Wall-clock numbers are never asserted on, and `tools/benchlock.py` refuses
-  to gate a key outside those families even if one is added by mistake.
+- **CI gates only deterministic quantities**: the README against the
+  committed benchmark CSV (exact), plus memory *growth ratios* and
+  first-principles predictions measured on the runner. Absolute
+  `tracemalloc` byte counts are never compared across machines, and
+  wall-clock numbers are never asserted on anywhere.
 - The recursion depth is O(log n), so Python's recursion limit is not a
   practical concern, but it has not been tested above n = 20,000.
 

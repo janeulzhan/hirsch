@@ -83,28 +83,55 @@ def test_linear_peak_grows_sub_quadratically() -> None:
     assert peaks[-1] / peaks[0] < 12, (peaks,)
 
 
+def marginal_bytes_per_residue(aligner, m: int, small: int, large: int) -> float:
+    """Peak memory cost of one extra residue of the longer sequence.
+
+    Holding ``y`` fixed and differencing two peaks cancels the fixed
+    overhead, which is what makes the two implementations comparable and the
+    result portable: it is a slope, not an absolute byte count.
+    """
+    y = make_pair(m, seed=5)[0]
+    x_small = make_pair(small, seed=6)[0]
+    x_large = make_pair(large, seed=6)[0]
+    peak_small = peak_bytes(lambda: aligner(x_small, y, SCORING))
+    peak_large = peak_bytes(lambda: aligner(x_large, y, SCORING))
+    return (peak_large - peak_small) / (large - small)
+
+
 def test_marginal_cost_of_a_longer_x_is_bytes_not_a_dp_row() -> None:
     """Hold ``y`` short and grow ``x``: what does each extra residue cost?
 
     For the oracle, one more residue of ``x`` means one more row of each of
     three int64 layers, so ``24 * (m + 1)`` bytes.  For the linear-space
     aligner the DP working set does not grow at all; the only growth is the
-    encoded copy of ``x`` itself, a couple of bytes per residue.  Asserting on
-    the *marginal* cost rather than the total strips out fixed overhead and
-    makes the comparison exact.
+    encoded copy of ``x`` itself.
+
+    These are the figures quoted in the README, so they are asserted here
+    rather than merely bounded.  The oracle's slope is checked against the
+    value its own data structure forces, which is a prediction no machine can
+    disagree with.
     """
     m = 200
-    y = make_pair(m, seed=5)[0]
     small, large = 4_000, 20_000
-    x_small = make_pair(small, seed=6)[0]
-    x_large = make_pair(large, seed=6)[0]
-    peak_small = peak_bytes(lambda: linear.align_score(x_small, y, SCORING))
-    peak_large = peak_bytes(lambda: linear.align_score(x_large, y, SCORING))
 
-    marginal = (peak_large - peak_small) / (large - small)
-    quadratic_row = 24 * (m + 1)
-    assert marginal < 16, (peak_small, peak_large, marginal)
-    assert marginal < quadratic_row / 50, (marginal, quadratic_row)
+    quadratic_marginal = marginal_bytes_per_residue(
+        quadratic.align_score, m, small, large
+    )
+    predicted = 24 * (m + 1)
+    assert abs(quadratic_marginal - predicted) / predicted < 0.02, (
+        quadratic_marginal,
+        predicted,
+    )
+
+    linear_marginal = marginal_bytes_per_residue(linear.align_score, m, small, large)
+    # Encoding one residue costs one byte in the latin-1 buffer plus two in
+    # the int16 code array; the rest is allocator granularity.
+    assert 1 <= linear_marginal <= 10, linear_marginal
+
+    assert quadratic_marginal / linear_marginal > 100, (
+        quadratic_marginal,
+        linear_marginal,
+    )
 
 
 def test_linear_uses_far_less_than_quadratic_at_the_same_size() -> None:

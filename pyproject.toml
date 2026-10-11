@@ -7,7 +7,7 @@ name = "hirsch"
 version = "0.1.0"
 description = "Optimal affine-gap sequence alignment in linear space, from scratch"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Ulzhan Khamidolla", email = "khamidolla.ulzhan@gmail.com" }]
 keywords = [

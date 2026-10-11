@@ -1,0 +1,9 @@
+metric,value
+linear_bytes_per_residue,5.63
+linear_peak_large,144961.0
+linear_peak_small,54857.0
+predicted_quadratic_bytes_per_residue,4824.0
+quadratic_bytes_per_residue,4850.02
+quadratic_peak_large,97007824.0
+quadratic_peak_small,19407584.0
+ratio,861.5
