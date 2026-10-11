@@ -20,21 +20,21 @@ homologous partner (12 percent divergence, with indels). Raw numbers in
 
 | n | DP cells | quadratic peak | linear peak | ratio |
 |---:|---:|---:|---:|---:|
-| 100 | <!--bench:cells.n100-->10,100<!--/bench--> | <!--bench:mem.n100_quadratic_bytes tol=8%-->257,422<!--/bench--> B | <!--bench:mem.n100_linear_bytes tol=30%-->27,006<!--/bench--> B | <!--bench:ratio.n100 tol=30%-->9.5<!--/bench-->x |
-| 1,000 | <!--bench:cells.n1000-->1,002,001<!--/bench--> | <!--bench:mem.n1000_quadratic_bytes tol=5%-->24,167,696<!--/bench--> B | <!--bench:mem.n1000_linear_bytes tol=25%-->146,216<!--/bench--> B | <!--bench:ratio.n1000 tol=25%-->165.3<!--/bench-->x |
-| 5,000 | <!--bench:cells.n5000-->24,939,987<!--/bench--> | <!--bench:mem.n5000_quadratic_bytes tol=5%-->599,141,876<!--/bench--> B | <!--bench:mem.n5000_linear_bytes tol=20%-->672,396<!--/bench--> B | <!--bench:ratio.n5000 tol=20%-->891.1<!--/bench-->x |
-| 20,000 | <!--bench:cells.n20000-->400,520,025<!--/bench--> | skipped, needs 9.6 GB | <!--bench:mem.n20000_linear_bytes tol=20%-->2,654,264<!--/bench--> B | n/a |
+| 100 | <!--bench:cells.n100-->10,100<!--/bench--> | <!--bench:mem.n100_quadratic_bytes tol=2%-->257,422<!--/bench--> B | <!--bench:mem.n100_linear_bytes tol=2%-->27,006<!--/bench--> B | <!--bench:ratio.n100 tol=2%-->9.5<!--/bench-->x |
+| 1,000 | <!--bench:cells.n1000-->1,002,001<!--/bench--> | <!--bench:mem.n1000_quadratic_bytes tol=2%-->24,167,696<!--/bench--> B | <!--bench:mem.n1000_linear_bytes tol=2%-->146,216<!--/bench--> B | <!--bench:ratio.n1000 tol=2%-->165.3<!--/bench-->x |
+| 5,000 | <!--bench:cells.n5000-->24,939,987<!--/bench--> | <!--bench:mem.n5000_quadratic_bytes tol=2%-->599,141,876<!--/bench--> B | <!--bench:mem.n5000_linear_bytes tol=2%-->672,396<!--/bench--> B | <!--bench:ratio.n5000 tol=2%-->891.1<!--/bench-->x |
+| 20,000 | <!--bench:cells.n20000-->400,520,025<!--/bench--> | skipped, needs 9.6 GB | <!--bench:mem.n20000_linear_bytes tol=2%-->2,654,264<!--/bench--> B | n/a |
 
 The quadratic column roughly quadruples each time n doubles; the linear
 column roughly doubles. At n = 5,000, the largest size both can run on this
 machine, that is
-<!--bench:mem.n5000_quadratic_mib tol=5%-->571.4<!--/bench--> MiB against
-<!--bench:mem.n5000_linear_mib tol=15%-->0.6<!--/bench--> MiB, a factor of
-<!--bench:ratio.n5000 tol=20%-->891.1<!--/bench-->. At n = 20,000 the full
+<!--bench:mem.n5000_quadratic_mib tol=10%-->571.4<!--/bench--> MiB against
+<!--bench:mem.n5000_linear_mib tol=10%-->0.6<!--/bench--> MiB, a factor of
+<!--bench:ratio.n5000 tol=2%-->891.1<!--/bench-->. At n = 20,000 the full
 matrix would need three int64 layers over
 <!--bench:cells.n20000-->400,520,025<!--/bench--> cells, which is 9.6 GB, so
 the oracle is skipped there rather than run; the linear version finishes in
-<!--bench:mem.n20000_linear_mib tol=15%-->2.5<!--/bench--> MiB.
+<!--bench:mem.n20000_linear_mib tol=10%-->2.5<!--/bench--> MiB.
 
 Both implementations return the same score at every size the oracle can run,
 which the harness asserts: <!--bench:score.n5000_linear-->7,185<!--/bench-->
@@ -50,10 +50,19 @@ values. It runs two ways on purpose:
 - **Locally**, re-running the benchmark, which is how these numbers are
   regenerated.
 
-Re-measuring `tracemalloc` peaks on a CI runner and comparing them to figures
-recorded on this laptop would be comparing two different things: the counts
-are reproducible to the byte on one machine, but they track the numpy and
-CPython build. Catching an actual memory regression is instead the job of
+The CI job additionally re-measures the two cheap sizes on the runner and
+prints how far each number moved, without gating on it. That turns the
+tolerance question into an observation: across macOS arm64 / CPython 3.11.9
+and Ubuntu 24.04 x86-64 / CPython 3.11.17, **every gated key drifted 0.00
+percent**, `tracemalloc` peaks included. The declared tolerances are 2
+percent on full-precision values and 10 percent on the three MiB figures,
+whose one-decimal rounding is itself coarser than any drift yet seen. They
+are bounds on regression, not padding for a platform gap.
+
+Gating absolute byte counts measured on a runner would still be the wrong
+shape of check even though the drift is currently zero, since it ties a
+green build to that staying true across future numpy and CPython releases.
+Catching an actual memory regression is instead the job of
 [`tests/test_memory.py`](tests/test_memory.py), which runs on every CI job and
 asserts growth ratios and first-principles predictions rather than absolute
 byte counts: that the oracle's peak more than triples per doubling of n while
@@ -313,11 +322,11 @@ Read these before using this for anything.
   is inherently O(n + m), and that term is included in every number above.
   Measured: with `m` held at 200 and `n` grown from 4,000 to 20,000, one more
   residue of the longer sequence costs
-  <!--bench:marginal.linear_bytes_per_residue tol=40%-->5.63<!--/bench-->
+  <!--bench:marginal.linear_bytes_per_residue tol=2%-->5.63<!--/bench-->
   bytes here against
-  <!--bench:marginal.quadratic_bytes_per_residue tol=5%-->4,850.02<!--/bench-->
+  <!--bench:marginal.quadratic_bytes_per_residue tol=2%-->4,850.02<!--/bench-->
   bytes for the oracle, a factor of
-  <!--bench:marginal.ratio tol=40%-->861.5<!--/bench-->. The oracle's figure
+  <!--bench:marginal.ratio tol=2%-->861.5<!--/bench-->. The oracle's figure
   is one more row of three int64 layers, which predicts
   <!--bench:marginal.predicted_quadratic_bytes_per_residue-->4,824<!--/bench-->
   bytes; the measurement lands within 0.6 percent of that, and
