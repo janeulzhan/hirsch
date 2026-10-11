@@ -1,0 +1,11 @@
+{
+  "hardware": {"cpu": "fixture", "memsize": "0 GiB", "python": "3.11.9", "numpy": "2.4.6"},
+  "values": {
+    "mem.n1000_linear_bytes": 146216,
+    "mem.n1000_quadratic_bytes": 24167696,
+    "score.n1000_linear": 1387,
+    "cells.n1000": 1002001,
+    "ratio.n1000": 165.3,
+    "pairs.ci": 6000
+  }
+}

@@ -1,0 +1,18 @@
+hardware: Apple M4, 16 GiB
+python 3.11.9, numpy 2.4.6
+1 warmup run, 3 timed runs per cell
+
+n       impl                 peak    peak/cell      wall time
+-------------------------------------------------------------
+100     linear            26.4 KB          2.7     0.006 +/- 0.000 s
+100     quadratic        251.4 KB         25.5     0.001 +/- 0.000 s
+1000    linear           142.8 KB          0.1     0.092 +/- 0.001 s
+1000    quadratic         23.0 MB         24.1     0.015 +/- 0.000 s
+5000    linear           656.6 KB          0.0     0.807 +/- 0.024 s
+5000    quadratic        571.4 MB         24.0     0.381 +/- 0.058 s
+20000   linear             2.5 MB          0.0     7.645 +/- 0.387 s
+20000   quadratic         skipped              three int64 layers would need 9.6 GB
+
+ratio.n100: 9.5x
+ratio.n1000: 165.3x
+ratio.n5000: 891.1x
