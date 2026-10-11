@@ -251,7 +251,7 @@ default, 165 with the slow sweep.
 
 ```
 $ python3 -m pytest -q
-148 passed, 1 skipped, 16 deselected in 27.83s
+149 passed, 1 skipped, 16 deselected in 28.4s
 ```
 
 That is a fresh clone into a clean virtualenv, following only the quickstart

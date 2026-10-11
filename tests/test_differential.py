@@ -124,3 +124,27 @@ def test_differential_protein_matrix() -> None:
             x = random_sequence(rng, ALPHABETS["protein"], 0, 70)
             y = random_sequence(rng, ALPHABETS["protein"], 0, 70)
             check_pair(x, y, scoring)
+
+
+def test_differential_asymmetric_matrix() -> None:
+    """The argument swap must survive a substitution matrix that is not symmetric.
+
+    ``linear.align`` swaps its arguments so the retained DP rows are
+    ``min(n, m)`` long, which means it also has to transpose the substitution
+    matrix.  Every matrix shipped here is symmetric, so that transpose would
+    be dead code under the rest of the suite and a bug in it would go unseen.
+    A deliberately asymmetric matrix exercises it.
+    """
+    rng = random.Random(0)
+    alphabet = "ACGT"
+    matrix = {(a, b): rng.randint(-5, 5) for a in alphabet for b in alphabet}
+    asymmetric = [k for k in matrix if matrix[k] != matrix[(k[1], k[0])]]
+    assert asymmetric, "the fixture matrix is symmetric, so it proves nothing"
+
+    scoring = Scoring(gap_open=7, gap_extend=2, matrix=matrix, name="asymmetric")
+    for _ in range(250):
+        x = random_sequence(rng, alphabet, 0, 45)
+        y = random_sequence(rng, alphabet, 0, 45)
+        check_pair(x, y, scoring)
+        # and with the arguments the other way round, which takes the swap
+        check_pair(y, x, scoring)
