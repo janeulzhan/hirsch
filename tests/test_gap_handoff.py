@@ -25,7 +25,7 @@ from typing import List, Tuple
 
 import pytest
 
-from conftest import GAP_SETTINGS, random_sequence, scheme_id
+from conftest import ALPHABETS, GAP_SETTINGS, random_sequence, scheme_id
 from hirsch import linear, quadratic
 from hirsch._ops import NEG_INF
 from hirsch.scoring import Scoring
@@ -220,3 +220,54 @@ def test_spanning_deletion_is_where_the_naive_version_fails() -> None:
         if naive_split_score(x, y, scoring) != correct:
             failures += 1
     assert failures > 0
+
+
+def test_how_often_the_naive_recombination_is_wrong() -> None:
+    """Quantify the bug across the whole parameter grid, with exact counts.
+
+    Everything here is seeded, so the counts are reproducible and are quoted
+    in the README.  Two things are worth pinning:
+
+    * at ``gap_open = 0`` the naive version is never wrong, because with no
+      open penalty there is nothing to double-charge.  That is the theory
+      making a falsifiable prediction, and it holds for all three alphabets.
+    * at every affine setting it is wrong on roughly half of random pairs.
+      This is not a rare corner case.
+    """
+    pairs_per_combo = 100
+    wrong_total = 0
+    spanning_total = 0
+    checked = 0
+    zero_open_wrong = 0
+
+    for alphabet_name in sorted(ALPHABETS):
+        for scoring in GAP_SETTINGS:
+            rng = random.Random(4242)
+            for _ in range(pairs_per_combo):
+                x = random_sequence(rng, ALPHABETS[alphabet_name], 8, 40)
+                y = random_sequence(rng, ALPHABETS[alphabet_name], 4, 30)
+                correct = quadratic.align_score(x, y, scoring)
+                result, stats = linear.split_statistics(x, y, scoring)
+
+                # The fixed implementation is exact on every single pair.
+                assert result.score == correct, (x, y, scheme_id(scoring))
+                assert (
+                    scoring.score_alignment(result.aligned_x, result.aligned_y)
+                    == correct
+                )
+
+                checked += 1
+                if stats["spanning_splits"]:
+                    spanning_total += 1
+                if naive_split_score(x, y, scoring) != correct:
+                    wrong_total += 1
+                    if scoring.gap_open == 0:
+                        zero_open_wrong += 1
+
+    assert checked == 1500
+    assert spanning_total == 954
+    assert wrong_total == 772
+    assert zero_open_wrong == 0, (
+        "with gap_open=0 there is no open penalty to double-charge, so the "
+        "naive recombination must be exact"
+    )
