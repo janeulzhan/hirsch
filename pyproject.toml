@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hirsch"
+version = "0.1.0"
+description = "Optimal affine-gap sequence alignment in linear space, from scratch"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Ulzhan Khamidolla", email = "khamidolla.ulzhan@gmail.com" }]
+keywords = [
+    "sequence-alignment",
+    "dynamic-programming",
+    "bioinformatics",
+    "hirschberg",
+    "algorithms",
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = ["numpy>=1.21"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+hirsch = "hirsch.cli:main"
+
+[project.urls]
+Source = "https://github.com/janeulzhan/hirsch"
+
+[tool.setuptools]
+packages = ["hirsch"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "tests"]
+addopts = "-m 'not slow and not network'"
+markers = [
+    "slow: the large differential sweep; run with -m slow",
+    "network: needs the network (live UniProt fetch); run with -m network",
+]

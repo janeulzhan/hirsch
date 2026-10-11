@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Test
+        run: python -m pytest -q
+
+      - name: Verify the CLI demo runs offline
+        run: python -m hirsch.cli P69905 P68871 --offline --no-color
+
+  benchlock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      # Re-measures the benchmark and compares it against the numbers
+      # committed in the README. Only deterministic quantities are gated:
+      # tracemalloc peak memory, alignment scores, DP cell counts, ratios and
+      # test pair counts. Wall-clock timings are never gated.
+      - name: Check the README numbers
+        run: python tools/benchlock.py --check --runs 1

@@ -1,0 +1,26 @@
+hirsch: optimal affine-gap global alignment in linear space
+
+HBA_HUMAN Hemoglobin subunit alpha OS=Homo sapiens OX=9606 GN=HBA1 PE=1 SV=2 (142 residues)
+HBB_HUMAN Hemoglobin subunit beta OS=Homo sapiens OX=9606 GN=HBB PE=1 SV=2 (147 residues)
+
+HBA_HUMAN     1 MV-LSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHF------DLSHGS 53
+                || |+|.+|+.|.|.||||  +..|.|.|||.|+.+.+|.|+.+|..|      |...|+
+HBB_HUMAN     1 MVHLTPEEKSAVTALWGKV--NVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGN 58
+
+HBA_HUMAN    54 AQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAH 113
+                .+||.|||||..|.++.+||+|++....+.||+||..||.|||.||+||.+.|+..||.|
+HBB_HUMAN    59 PKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHH 118
+
+HBA_HUMAN   114 LPAEFTPAVHASLDKFLASVSTVLTSKYR 142
+                ...||||.|.|+..|.+|.|+..|..||.
+HBB_HUMAN   119 FGKEFTPPVQAAYQKVVAGVANALAHKYH 147
+
+score            282
+alignment length 149 columns
+identities       63 (42.3%)
+positives        88 of 140 aligned columns (62.9%)
+gap columns      9 in 3 run(s)
+scoring          BLOSUM62, gap open 11, gap extend 1
+aligner          linear
+peak memory      93802 bytes (91.6 KB, tracemalloc)
+annotation       | identity, + positive substitution, . negative substitution
