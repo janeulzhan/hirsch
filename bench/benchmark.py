@@ -289,6 +289,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--csv", type=Path, help="write raw results to this CSV path")
     parser.add_argument("--json", action="store_true", help="emit JSON on stdout")
     parser.add_argument(
+        "--sizes",
+        type=lambda v: [int(part) for part in v.split(",")],
+        help="comma-separated sequence lengths to benchmark (default: %s)"
+        % ",".join(str(n) for n in SIZES),
+    )
+    parser.add_argument(
         "--runs",
         type=int,
         default=DEFAULT_TIMED_RUNS,
@@ -296,7 +302,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    report = run(args.runs)
+    report = run(args.runs, args.sizes)
 
     if args.csv:
         args.csv.parent.mkdir(parents=True, exist_ok=True)

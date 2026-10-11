@@ -135,6 +135,7 @@ def load_values(
     json_path: Optional[Path],
     csv_path: Optional[Path] = None,
     timed_runs: int = 3,
+    sizes: Optional[List[int]] = None,
 ) -> Dict[str, object]:
     if json_path is not None:
         payload = json.loads(json_path.read_text())
@@ -143,7 +144,7 @@ def load_values(
         return load_values_from_csv(csv_path)
     from bench import benchmark  # noqa: PLC0415  (deliberately lazy)
 
-    report = benchmark.run(timed_runs)
+    report = benchmark.run(timed_runs, sizes)
     return dict(benchmark.flatten(report))
 
 
@@ -194,6 +195,33 @@ def run_check(text: str, values: Dict[str, object]) -> List[str]:
     return problems
 
 
+def run_report(text: str, values: Dict[str, object]) -> List[str]:
+    """Describe the drift of every gated span, without judging it.
+
+    Used to answer the question "are these tolerances justified?" with data
+    rather than with a guess: run it on another machine and read off how far
+    each number actually moves.  Never fails.
+    """
+    lines: List[str] = []
+    for key, attrs, raw in validate_markers(text):
+        if key not in values:
+            lines.append("%-48s committed only, not measured here" % key)
+            continue
+        committed = parse_number(raw)
+        measured = float(values[key])  # type: ignore[arg-type]
+        amount, relative = parse_tolerance(attrs)
+        if measured:
+            pct = 100.0 * (committed - measured) / abs(measured)
+        else:
+            pct = 0.0
+        budget = ("%.0f%%" % amount) if relative else ("exact" if not amount else str(amount))
+        lines.append(
+            "%-48s committed %16s  measured %16s  drift %+7.2f%%  budget %s"
+            % (key, format_number(committed), format_number(measured), pct, budget)
+        )
+    return lines
+
+
 def run_update(text: str, values: Dict[str, object]) -> Tuple[str, List[str]]:
     validate_markers(text)
     missing: List[str] = []
@@ -234,6 +262,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="verify only, never write")
     mode.add_argument("--update", action="store_true", help="rewrite the spans in place")
+    mode.add_argument(
+        "--report",
+        action="store_true",
+        help="print the observed drift of every span and always exit 0; use "
+        "this to find out what the tolerances should be",
+    )
     parser.add_argument(
         "--runs",
         type=int,
@@ -242,20 +276,30 @@ def main(argv: Optional[List[str]] = None) -> int:
         "depend on this, so CI passes --runs 1",
     )
     parser.add_argument(
+        "--sizes",
+        type=lambda v: [int(part) for part in v.split(",")],
+        help="restrict a live re-measure to these sequence lengths",
+    )
+    parser.add_argument(
         "--no-extras",
         action="store_true",
         help="skip the non-benchmark deterministic counts (test pair totals)",
     )
     args = parser.parse_args(argv)
 
-    if not args.check and not args.update:
+    if not args.check and not args.update and not args.report:
         args.check = True
 
     text = args.readme.read_text()
     try:
-        values = load_values(args.json, args.csv, args.runs)
+        values = load_values(args.json, args.csv, args.runs, args.sizes)
         if not args.no_extras:
             values.update(extra_values())
+
+        if args.report:
+            for line in run_report(text, values):
+                print(line)
+            return 0
 
         if args.check:
             problems = run_check(text, values)

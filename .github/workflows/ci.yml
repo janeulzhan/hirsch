@@ -8,18 +8,21 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: the latest label migrates to Ubuntu 26
+    # on 2026-10-19, and a green build should not change underneath the repo
+    # on a date nobody chose.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        # These are the versions the project claims to support. Keep this
-        # matrix and requires-python in pyproject.toml in step with each
-        # other; the README quotes both.
+        # The versions the project claims to support. Keep this matrix and
+        # requires-python in pyproject.toml in step with each other; the
+        # README quotes both.
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -29,7 +32,7 @@ jobs:
           python -m pip install -e ".[test]"
 
       # Includes tests/test_memory.py, which is where an actual memory
-      # regression would be caught. Those assertions are growth ratios and
+      # regression gets caught. Those assertions are growth ratios and
       # first-principles predictions, never absolute byte counts, so they are
       # portable across runners by construction.
       - name: Test
@@ -39,11 +42,11 @@ jobs:
         run: python -m hirsch.cli P69905 P68871 --offline --no-color
 
   benchlock:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -52,10 +55,17 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[test]"
 
-      # Checks the README against the raw CSV committed beside it. Nothing is
-      # measured here, so the comparison is exact and identical on every
-      # machine. Re-measuring tracemalloc peaks on a runner and comparing them
-      # to figures recorded on different hardware would be comparing two
+      # The gate. Checks the README against the raw CSV committed beside it;
+      # nothing is measured, so the comparison is exact and identical on every
+      # machine. Re-measuring tracemalloc peaks here and comparing them to
+      # figures recorded on different hardware would be comparing two
       # different things, and would allocate 600 MB to do it.
       - name: Check the README against the committed benchmark data
         run: python tools/benchlock.py --check --csv bench/results.csv
+
+      # Not a gate: re-measures the two cheap sizes on this runner and prints
+      # how far each number moves against the committed ones. This is how the
+      # declared tolerances get justified by observation rather than by
+      # guesswork, and it cannot fail the build.
+      - name: Report cross-platform drift (informational)
+        run: python tools/benchlock.py --report --sizes 100,1000 --runs 1
