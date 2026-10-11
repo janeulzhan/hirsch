@@ -238,7 +238,7 @@ degenerate `gap_open = 0` case. Every pair asserts three things:
 | sweep | pairs | where |
 |---|---:|---|
 | default, runs in CI | <!--bench:pairs.ci-->6,000<!--/bench--> | every push |
-| `pytest -m slow`, longer sequences | <!--bench:pairs.slow-->30,000<!--/bench--> | local, 115 s |
+| `pytest -m slow`, longer sequences | <!--bench:pairs.slow-->30,000<!--/bench--> | local, 102 s |
 
 Both have been run; both pass. On top of that: a dedicated gap-handoff file
 that re-implements the naive recombination and proves it wrong, plus a
