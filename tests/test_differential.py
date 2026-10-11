@@ -31,8 +31,8 @@ from hirsch.scoring import Scoring
 
 # Pairs per (alphabet, gap setting) combination.  There are 3 x 5 = 15
 # combinations, so the totals are 15 * the numbers below.
-CI_PAIRS_PER_COMBO = 150          # 2,250 pairs
-SLOW_PAIRS_PER_COMBO = 700        # 10,500 pairs
+CI_PAIRS_PER_COMBO = 400          # 6,000 pairs
+SLOW_PAIRS_PER_COMBO = 2000       # 30,000 pairs
 
 
 def check_pair(x: str, y: str, scoring: Scoring) -> None:
@@ -78,7 +78,7 @@ def sweep(
 @pytest.mark.parametrize("alphabet_name", sorted(ALPHABETS))
 @pytest.mark.parametrize("scoring", GAP_SETTINGS, ids=scheme_id)
 def test_differential_ci(alphabet_name: str, scoring: Scoring) -> None:
-    """2,250 pairs in total across the 15 parameter combinations."""
+    """6,000 pairs in total across the 15 parameter combinations."""
     seed = hash((alphabet_name, scheme_id(scoring))) & 0xFFFF
     done = sweep(
         ALPHABETS[alphabet_name], scoring, CI_PAIRS_PER_COMBO, seed, (0, 45)
@@ -90,7 +90,7 @@ def test_differential_ci(alphabet_name: str, scoring: Scoring) -> None:
 @pytest.mark.parametrize("alphabet_name", sorted(ALPHABETS))
 @pytest.mark.parametrize("scoring", GAP_SETTINGS, ids=scheme_id)
 def test_differential_slow(alphabet_name: str, scoring: Scoring) -> None:
-    """10,500 pairs in total, with longer sequences.  Run locally."""
+    """30,000 pairs in total, with longer sequences.  Run locally."""
     seed = 0xC0FFEE ^ (hash((alphabet_name, scheme_id(scoring))) & 0xFFFF)
     done = sweep(
         ALPHABETS[alphabet_name], scoring, SLOW_PAIRS_PER_COMBO, seed, (0, 120)

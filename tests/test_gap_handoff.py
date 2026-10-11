@@ -42,6 +42,7 @@ def naive_split_score(x: str, y: str, scoring: Scoring) -> int:
     """
     xc, yc, sub = scoring.prepare(x, y)
     go, ge = scoring.gap_open, scoring.gap_extend
+    ctx = linear._Context(xc, yc, sub, go, ge)
 
     def base(i1: int, i2: int, j1: int, j2: int, tb: int, te: int) -> int:
         n, m = i2 - i1, j2 - j1
@@ -59,14 +60,14 @@ def naive_split_score(x: str, y: str, scoring: Scoring) -> int:
         if n <= 1 or m == 0:
             return base(i1, i2, j1, j2, tb, te)
         r = n // 2
-        fm, fx, fy = linear._layers(xc, i1, 1, r, yc, j1, 1, m, sub, go, ge, tb)
-        gm, gx, gy = linear._layers(
-            xc, i2 - 1, -1, n - r, yc, j2 - 1, -1, m, sub, go, ge, te
-        )
+        fm, fx, fy = linear._layers(ctx, i1, 1, r, j1, 1, m, tb)
+        gm, gx, gy = linear._layers(ctx, i2 - 1, -1, n - r, j2 - 1, -1, m, te)
         best, best_j = NEG_INF, 0
         for jj in range(m + 1):
             k = m - jj
-            value = max(fm[jj], fx[jj], fy[jj]) + max(gm[k], gx[k], gy[k])
+            value = int(max(fm[jj], fx[jj], fy[jj])) + int(
+                max(gm[k], gx[k], gy[k])
+            )
             if value > best:
                 best, best_j = value, jj
         return rec(i1, i1 + r, j1, j1 + best_j, tb, go) + rec(
