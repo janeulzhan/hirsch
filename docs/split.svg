@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 440" width="1020" height="440" role="img" aria-labelledby="hirschTitle hirschDesc">
+<title id="hirschTitle">Myers-Miller: splitting the DP matrix, and handing the gap state across the split row</title>
+<desc id="hirschDesc">Left panel: the n by m dynamic programming matrix. A forward sweep runs from row 0 down to the split row r, keeping one row of each of the three affine layers; a reverse sweep runs from row n up to the same row. Combining them picks a split column j star. The recursion then solves the top-left block against y up to j star and the bottom-right block against y from j star, and concatenates the two alignments. Right panel: the case a plain combination gets wrong. The optimal path enters the split node on a vertical edge and leaves it on a vertical edge, so one deletion run straddles the split row. The forward half and the reverse half each charge a gap-open for that single run, which overcharges by exactly one gap-open, and no other choice of split column avoids it. The fix evaluates a second candidate, forward X at j plus reverse X at j plus gap-open, which refunds the duplicate charge, and then solves the two halves with the boundary gap-open waived so that both halves agree on being inside the gap.</desc>
+
+<g font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" fill="#767676">
+
+<text x="60" y="28" font-size="14" font-weight="600">1. Split the matrix, recurse on two blocks</text>
+<text x="540" y="28" font-size="14" font-weight="600">2. Hand the gap state across the split</text>
+
+<rect x="60" y="72" width="360" height="280" fill="none" stroke="#767676" stroke-width="1.4"/>
+<text x="60" y="64" font-size="11">j = 0</text>
+<text x="392" y="64" font-size="11">j = m</text>
+<text x="26" y="84" font-size="11">i = 0</text>
+<text x="26" y="362" font-size="11">i = n</text>
+
+<rect x="60" y="72" width="200" height="140" fill="#3f9163" fill-opacity="0.11"/>
+<rect x="260" y="212" width="160" height="140" fill="#3f9163" fill-opacity="0.11"/>
+<g fill="none" stroke="#3f9163" stroke-width="1.3" stroke-dasharray="5 4">
+<rect x="60" y="72" width="200" height="140"/>
+<rect x="260" y="212" width="160" height="140"/>
+</g>
+
+<g stroke="#4e8fd1" stroke-width="1.3" fill="none">
+<path d="M 100 84 L 100 194"/>
+<path d="M 160 84 L 160 194"/>
+<path d="M 220 84 L 220 194"/>
+</g>
+<g fill="#4e8fd1" stroke="none">
+<path d="M 96 194 L 104 194 L 100 203 z"/>
+<path d="M 156 194 L 164 194 L 160 203 z"/>
+<path d="M 216 194 L 224 194 L 220 203 z"/>
+</g>
+<g font-size="11" fill="#4e8fd1">
+<text x="274" y="116">forward sweep,</text>
+<text x="274" y="130">rows 0 to r</text>
+<text x="274" y="148">keeps one row</text>
+<text x="274" y="162">of M, X and Y</text>
+</g>
+
+<g stroke="#b5781f" stroke-width="1.3" fill="none">
+<path d="M 300 340 L 300 230"/>
+<path d="M 350 340 L 350 230"/>
+<path d="M 400 340 L 400 230"/>
+</g>
+<g fill="#b5781f" stroke="none">
+<path d="M 296 230 L 304 230 L 300 221 z"/>
+<path d="M 346 230 L 354 230 L 350 221 z"/>
+<path d="M 396 230 L 404 230 L 400 221 z"/>
+</g>
+<g font-size="11" fill="#b5781f">
+<text x="78" y="262">reverse sweep,</text>
+<text x="78" y="276">rows n to r</text>
+<text x="78" y="294">the same three</text>
+<text x="78" y="308">rows, backwards</text>
+</g>
+
+<path d="M 60 212 L 420 212" stroke="#c2546b" stroke-width="1.6" stroke-dasharray="7 5" fill="none"/>
+<circle cx="260" cy="212" r="5" fill="#c2546b"/>
+<text x="430" y="210" font-size="11" fill="#c2546b">split row</text>
+<text x="430" y="224" font-size="11" fill="#c2546b">r = n/2</text>
+<path d="M 260 352 L 260 364" stroke="#c2546b" stroke-width="1.3" fill="none"/>
+<text x="252" y="378" font-size="11" fill="#c2546b">j*</text>
+
+<g font-size="11">
+<text x="60" y="404">Recurse on the two shaded blocks, then concatenate. Working</text>
+<text x="60" y="420">space is one row of each layer: O(min(n, m)), not O(nm).</text>
+</g>
+
+<g fill="none" stroke="#767676" stroke-width="1.1">
+<rect x="676" y="80" width="56" height="42"/>
+<rect x="676" y="122" width="56" height="42"/>
+<rect x="676" y="164" width="56" height="42"/>
+<rect x="732" y="80" width="56" height="42"/>
+<rect x="732" y="122" width="56" height="42"/>
+<rect x="732" y="164" width="56" height="42"/>
+</g>
+<path d="M 640 143 L 822 143" stroke="#c2546b" stroke-width="1.6" stroke-dasharray="7 5" fill="none"/>
+<text x="828" y="140" font-size="11" fill="#c2546b">split</text>
+<text x="828" y="154" font-size="11" fill="#c2546b">row r</text>
+
+<path d="M 704 74 L 704 202" stroke="#c2546b" stroke-width="3" fill="none"/>
+<path d="M 698 202 L 710 202 L 704 214 z" fill="#c2546b" stroke="none"/>
+<circle cx="704" cy="143" r="5" fill="#c2546b"/>
+
+<g font-size="11" fill="#4e8fd1">
+<text x="540" y="100">forward half</text>
+<text x="540" y="114">charges one</text>
+<text x="540" y="128">gap-open</text>
+</g>
+<g font-size="11" fill="#b5781f">
+<text x="540" y="172">reverse half</text>
+<text x="540" y="186">charges that</text>
+<text x="540" y="200">same run again</text>
+</g>
+<g font-size="11">
+<text x="860" y="136">one deletion</text>
+<text x="860" y="150">run, not two</text>
+</g>
+
+<g font-size="11">
+<text x="540" y="248">A plain max(F) + max(R) overcharges by exactly one gap-open here,</text>
+<text x="540" y="264">and no other split column avoids it, so the score comes out quietly</text>
+<text x="540" y="280">too low. The fix:</text>
+</g>
+
+<g stroke="#3f9163" stroke-width="1.3" fill="none">
+<path d="M 542 302 L 560 302"/>
+<path d="M 542 338 L 560 338"/>
+<path d="M 542 374 L 560 374"/>
+</g>
+<g fill="#3f9163" stroke="none">
+<path d="M 560 298 L 560 306 L 569 302 z"/>
+<path d="M 560 334 L 560 342 L 569 338 z"/>
+<path d="M 560 370 L 560 378 L 569 374 z"/>
+</g>
+<g font-size="11" fill="#3f9163">
+<text x="578" y="306">score a second candidate, F_X[j] + R_X[j] + gap_open</text>
+<text x="578" y="342">use it only when strictly better, which forces each half</text>
+<text x="578" y="356">to end and to begin inside that same gap</text>
+<text x="578" y="378">solve the two halves with te = 0 and tb = 0 respectively</text>
+</g>
+
+<text x="540" y="420" font-size="11">Hirschberg 1975 over Gotoh 1982, after Myers &amp; Miller 1988.</text>
+
+</g>
+</svg>
