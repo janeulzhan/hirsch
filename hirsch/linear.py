@@ -90,9 +90,11 @@ class _Context:
 
     __slots__ = ("xc", "yarr", "sub", "sub_rows", "go", "ge", "goe")
 
-    def __init__(self, xc: List[int], yc: List[int], sub: List[List[int]], go: int, ge: int):
+    def __init__(
+        self, xc: np.ndarray, yc: np.ndarray, sub: List[List[int]], go: int, ge: int
+    ):
         self.xc = xc
-        self.yarr = np.asarray(yc, dtype=np.int64)
+        self.yarr = np.asarray(yc)
         self.sub = sub
         self.sub_rows = [np.asarray(row, dtype=np.int64) for row in sub]
         self.go = go
@@ -204,7 +206,7 @@ def _base_case(
     if m == 0:
         return [("D", n)]
     xs = ctx.xc[i1:i2]
-    ys = ctx.yarr[j1:j2].tolist()
+    ys = ctx.yarr[j1:j2]
     M, X, Y, Xe = fill_matrices(xs, ys, ctx.sub, ctx.go, ctx.ge, tb, te)
     return _quadratic_traceback(M, X, Y, Xe, xs, ys, ctx.sub, ctx.go, ctx.ge, tb, te)
 
@@ -219,7 +221,7 @@ def _base_case_score(
     if m == 0:
         return -(min(tb, te) + n * ctx.ge)
     xs = ctx.xc[i1:i2]
-    ys = ctx.yarr[j1:j2].tolist()
+    ys = ctx.yarr[j1:j2]
     M, X, Y, Xe = fill_matrices(xs, ys, ctx.sub, ctx.go, ctx.ge, tb, te)
     return max(int(M[n, m]), int(Y[n, m]), int(Xe[n]))
 

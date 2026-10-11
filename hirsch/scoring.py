@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
+import numpy as np
+
 __all__ = ["Scoring", "BLOSUM62", "blosum62"]
 
 
@@ -116,18 +118,22 @@ class Scoring:
 
     def prepare(
         self, x: Sequence[str], y: Sequence[str]
-    ) -> Tuple[List[int], List[int], List[List[int]]]:
+    ) -> Tuple[np.ndarray, np.ndarray, List[List[int]]]:
         """Encode both sequences to integer codes over their joint alphabet.
 
         Returns ``(x_codes, y_codes, sub)`` where ``sub[a][b]`` is the
-        substitution score.  Using small integer codes plus a nested list of
-        Python ints keeps the hot DP loop free of dictionary lookups and of
-        numpy scalar boxing, both of which dominate runtime otherwise.
+        substitution score.  Reducing residues to small integer codes keeps the
+        hot DP loop free of dictionary lookups.
+
+        The codes are returned as ``int16`` numpy arrays rather than Python
+        lists.  That is two bytes per residue instead of eight, and it matters:
+        the linear-space aligner's whole selling point is its memory, so the
+        encoding of the inputs should not quietly become the dominant term.
         """
         alphabet = sorted(set(x) | set(y))
         index = {ch: i for i, ch in enumerate(alphabet)}
         sub = [[self.pair(a, b) for b in alphabet] for a in alphabet]
-        return [index[ch] for ch in x], [index[ch] for ch in y], sub
+        return _encode(x, index), _encode(y, index), sub
 
     def score_alignment(self, aligned_x: str, aligned_y: str) -> int:
         """Independently re-score an already-built alignment.
@@ -160,6 +166,42 @@ class Scoring:
                 run += 1
         total -= self.gap_cost(run)
         return total
+
+
+# Residues are gathered through the lookup table in blocks.  numpy promotes
+# fancy-index operands to the platform integer type, so an unchunked gather
+# over a 20,000-residue sequence would transiently allocate 160 KB of int64
+# indices.  Chunking caps that transient at a constant regardless of n, which
+# keeps the encoding step from showing up in the memory benchmark.
+_ENCODE_CHUNK = 8192
+
+
+def _encode(seq: Sequence[str], index: Dict[str, int]) -> np.ndarray:
+    """Map a sequence of residues to an ``int16`` array of alphabet codes.
+
+    The fast path reinterprets the string's latin-1 bytes and gathers through a
+    256-entry lookup table, which avoids building an intermediate Python list.
+    Anything outside latin-1 falls back to the obvious loop.
+    """
+    n = len(seq)
+    if n == 0:
+        return np.zeros(0, dtype=np.int16)
+    if isinstance(seq, str):
+        try:
+            raw = np.frombuffer(seq.encode("latin-1"), dtype=np.uint8)
+        except UnicodeEncodeError:
+            raw = None
+        if raw is not None:
+            lut = np.full(256, -1, dtype=np.int16)
+            for ch, code in index.items():
+                if len(ch) == 1 and ord(ch) < 256:
+                    lut[ord(ch)] = code
+            codes = np.empty(n, dtype=np.int16)
+            for start in range(0, n, _ENCODE_CHUNK):
+                stop = min(start + _ENCODE_CHUNK, n)
+                np.take(lut, raw[start:stop], out=codes[start:stop])
+            return codes
+    return np.asarray([index[ch] for ch in seq], dtype=np.int16)
 
 
 def blosum62(gap_open: int = 11, gap_extend: int = 1) -> Scoring:
