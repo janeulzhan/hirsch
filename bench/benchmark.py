@@ -204,6 +204,7 @@ def flatten(report: Dict[str, object]) -> Dict[str, object]:
         if row["peak_bytes"] != "":
             flat["mem.%s_bytes" % key] = int(row["peak_bytes"])
             flat["mem.%s_kib" % key] = round(int(row["peak_bytes"]) / 1024)
+            flat["mem.%s_mib" % key] = round(int(row["peak_bytes"]) / (1024 * 1024), 1)
         if row["score"] != "":
             flat["score.%s" % key] = int(row["score"])
         flat["cells.n%d" % row["n"]] = int(row["dp_cells"])
