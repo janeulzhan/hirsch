@@ -251,8 +251,14 @@ default, 165 with the slow sweep.
 
 ```
 $ python3 -m pytest -q
-147 passed, 2 skipped, 16 deselected in 22.29s
+148 passed, 1 skipped, 16 deselected in 27.83s
 ```
+
+That is a fresh clone into a clean virtualenv, following only the quickstart
+above. The one skip is the gap-handoff test at `gap_open = 0`, where there is
+no open penalty to double-charge and so nothing to check. The 16 deselected
+are the slow sweep and the live UniProt fetch; both have been run separately
+and both pass.
 
 ## Benchmark, wall clock
 
