@@ -269,12 +269,12 @@ constructed family where the optimal alignment is a single long deletion
 centred on the split row; edge cases (empty, length 1, identical, disjoint
 alphabets, all-gap alignments, 400-to-1 length ratios); determinism, checked
 across separate interpreter processes; peak memory growth; BLOSUM62 symmetry
-and known entries; and the benchlock gate's own fixtures. 149 tests by
-default, 165 with the slow sweep.
+and known entries; and the benchlock gate's own fixtures. 161 tests by
+default, 177 with the slow sweep.
 
 ```
 $ python3 -m pytest -q
-149 passed, 1 skipped, 16 deselected in 25.39s
+160 passed, 1 skipped, 16 deselected in 24.69s
 ```
 
 That is a fresh clone into a clean virtualenv, following only the quickstart
