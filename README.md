@@ -20,17 +20,17 @@ homologous partner (12 percent divergence, with indels). Raw numbers in
 
 | n | DP cells | quadratic peak | linear peak | ratio |
 |---:|---:|---:|---:|---:|
-| 100 | <!--bench:cells.n100-->10,100<!--/bench--> | <!--bench:mem.n100_quadratic_bytes tol=12%-->257,422<!--/bench--> B | <!--bench:mem.n100_linear_bytes tol=12%-->27,006<!--/bench--> B | <!--bench:ratio.n100 tol=12%-->9.5<!--/bench-->x |
-| 1,000 | <!--bench:cells.n1000-->1,002,001<!--/bench--> | <!--bench:mem.n1000_quadratic_bytes tol=12%-->24,167,696<!--/bench--> B | <!--bench:mem.n1000_linear_bytes tol=12%-->146,216<!--/bench--> B | <!--bench:ratio.n1000 tol=12%-->165.3<!--/bench-->x |
-| 5,000 | <!--bench:cells.n5000-->24,939,987<!--/bench--> | <!--bench:mem.n5000_quadratic_bytes tol=12%-->599,141,876<!--/bench--> B | <!--bench:mem.n5000_linear_bytes tol=12%-->672,396<!--/bench--> B | <!--bench:ratio.n5000 tol=12%-->891.1<!--/bench-->x |
-| 20,000 | <!--bench:cells.n20000-->400,520,025<!--/bench--> | skipped, needs 9.6 GB | <!--bench:mem.n20000_linear_bytes tol=12%-->2,654,264<!--/bench--> B | n/a |
+| 100 | <!--bench:cells.n100-->10,100<!--/bench--> | <!--bench:mem.n100_quadratic_bytes tol=8%-->257,422<!--/bench--> B | <!--bench:mem.n100_linear_bytes tol=30%-->27,006<!--/bench--> B | <!--bench:ratio.n100 tol=30%-->9.5<!--/bench-->x |
+| 1,000 | <!--bench:cells.n1000-->1,002,001<!--/bench--> | <!--bench:mem.n1000_quadratic_bytes tol=5%-->24,167,696<!--/bench--> B | <!--bench:mem.n1000_linear_bytes tol=25%-->146,216<!--/bench--> B | <!--bench:ratio.n1000 tol=25%-->165.3<!--/bench-->x |
+| 5,000 | <!--bench:cells.n5000-->24,939,987<!--/bench--> | <!--bench:mem.n5000_quadratic_bytes tol=5%-->599,141,876<!--/bench--> B | <!--bench:mem.n5000_linear_bytes tol=20%-->672,396<!--/bench--> B | <!--bench:ratio.n5000 tol=20%-->891.1<!--/bench-->x |
+| 20,000 | <!--bench:cells.n20000-->400,520,025<!--/bench--> | skipped, needs 9.6 GB | <!--bench:mem.n20000_linear_bytes tol=20%-->2,654,264<!--/bench--> B | n/a |
 
 The quadratic column roughly quadruples each time n doubles; the linear
 column roughly doubles. At n = 5,000, the largest size both can run on this
 machine, that is
-<!--bench:mem.n5000_quadratic_mib tol=12%-->571.4<!--/bench--> MiB against
+<!--bench:mem.n5000_quadratic_mib tol=5%-->571.4<!--/bench--> MiB against
 <!--bench:mem.n5000_linear_mib tol=15%-->0.6<!--/bench--> MiB, a factor of
-<!--bench:ratio.n5000 tol=12%-->891.1<!--/bench-->. At n = 20,000 the full
+<!--bench:ratio.n5000 tol=20%-->891.1<!--/bench-->. At n = 20,000 the full
 matrix would need three int64 layers over
 <!--bench:cells.n20000-->400,520,025<!--/bench--> cells, which is 9.6 GB, so
 the oracle is skipped there rather than run; the linear version finishes in

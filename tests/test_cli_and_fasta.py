@@ -157,9 +157,11 @@ def test_cli_rejects_wrong_argument_counts() -> None:
 def test_committed_example_output_is_current() -> None:
     """``docs/example.txt`` is shown in the README, so it must not go stale.
 
-    Memory and the aligner name are allowed to differ only in that they are
-    excluded here; everything else, including the alignment itself, must match
-    a fresh run byte for byte.
+    Every line must match a fresh run byte for byte except the peak-memory
+    line, which is the one genuinely machine-dependent figure in the output:
+    the committed copy was measured on the hardware named in the README, and
+    a different CPU or Python build will land a few bytes away.  The line is
+    still checked for shape, just not for its exact value.
     """
     example = Path(__file__).parent.parent / "docs" / "example.txt"
     if not example.exists():
@@ -171,7 +173,25 @@ def test_committed_example_output_is_current() -> None:
         check=True,
         cwd=Path(__file__).parent.parent,
     ).stdout
-    assert fresh == example.read_text()
+
+    def split_off_memory(text: str):
+        kept, memory = [], None
+        for line in text.splitlines():
+            if line.startswith("peak memory"):
+                memory = line
+            else:
+                kept.append(line)
+        return kept, memory
+
+    fresh_lines, fresh_memory = split_off_memory(fresh)
+    committed_lines, committed_memory = split_off_memory(example.read_text())
+
+    assert fresh_lines == committed_lines
+    assert fresh_memory is not None and committed_memory is not None
+    assert fresh_memory.endswith("tracemalloc)")
+    # It should still be in the same ballpark, which rules out an accidental
+    # quadratic allocation sneaking into the linear path.
+    assert int(fresh_memory.split()[2]) < 4 * int(committed_memory.split()[2])
 
 
 @pytest.mark.network
